@@ -1,0 +1,35 @@
+version: "3"
+
+services:
+  postgres-database:
+    image: "postgres:10.5"
+    restart: "unless-stopped"
+    ports:
+      - "5432:5432"
+    volumes:
+      # Uncomment this if you wish to persist the database information
+      # - ./db/data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    environment:
+      POSTGRES_PASSWORD: "postgres"
+      POSTGRES_DB: "ferrum"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+  ferrum:
+    build: .
+    image: "mihaitodor/ferrum"
+    restart: "unless-stopped"
+    ports:
+      - "80:80"
+    environment:
+      FERRUM_DATABASE_HOST: postgres-database
+    healthcheck:
+      test: wget --spider -q http://localhost/health > /dev/null 2>&1 || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      - postgres-database
